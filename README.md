@@ -18,7 +18,6 @@ You can access the live, interactive guide at the following URL:
 
 ## Screenshot
 
-![A screenshot of the SPE Interactive Guide showing the card-based layout and an interactive modal.](screenshot.png)
 <img width="1105" height="341" alt="image" src="https://github.com/user-attachments/assets/aeb94112-5c85-4bf6-8816-fed15f27c0c7" />
 
 ## Features
