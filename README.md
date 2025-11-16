@@ -8,17 +8,9 @@ The guide features interactive content cards and challenges to create an engagin
 
 ---
 
-## Live Demo
-
-You can access the live, interactive guide at the following URL:
-
-**[https://chathuraratnayake997.github.io/SPEGuide/](https://chathuraratnayake997.github.io/SPEGuide/)**
-
----
-
 ## Screenshot
+<img width="1105" height="341" alt="image" src="https://github.com/user-attachments/assets/1f0da5f7-e780-4d65-904c-4af585651eca" />
 
-<img width="1105" height="341" alt="image" src="https://github.com/user-attachments/assets/aeb94112-5c85-4bf6-8816-fed15f27c0c7" />
 
 ## Features
 
@@ -27,3 +19,10 @@ You can access the live, interactive guide at the following URL:
 -   **Polished UI:** A clean, modern interface with a fully functional dark mode.
 -   **Fully Responsive:** Looks great on desktops, tablets, and mobile devices.
 -   **No Frameworks:** Built entirely with vanilla HTML, CSS, and JavaScript.
+
+---
+
+### How to Access
+
+Click the button at the top of this page or visit the following link:
+[https://chathuraratnayake997.github.io/SPEGuide/](https://chathuraratnayake997.github.io/SPEGuide/)
