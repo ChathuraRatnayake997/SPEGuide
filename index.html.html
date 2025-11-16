@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPE Guide: Interactive Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #f4f7f9;
+            --card-bg: #ffffff;
+            --text-color: #4a5568;
+            --heading-color: #1a202c;
+            --accent-color: #3182ce;
+            --accent-color-light: #ebf8ff;
+            --success-color: #38a169;
+            --danger-color: #e53e3e;
+            --shadow-color: rgba(0, 0, 0, 0.07);
+            --border-color: #e2e8f0;
+        }
+        body.dark-mode {
+            --bg-color: #1a202c;
+            --card-bg: #2d3748;
+            --text-color: #a0aec0;
+            --heading-color: #f7fafc;
+            --accent-color: #63b3ed;
+            --accent-color-light: #2c5282;
+            --border-color: #4a5568;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+            line-height: 1.7;
+        }
+
+        .header { text-align: center; padding: 60px 20px 40px; }
+        .header h1 { color: var(--heading-color); font-size: 2.8rem; font-weight: 700; text-shadow: 0 1px 2px var(--shadow-color); }
+        .header p { color: var(--accent-color); font-weight: 500; font-size: 1.1rem; margin-top: 5px; }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            padding: 0 40px 60px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -1px rgba(0,0,0,0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex; flex-direction: column;
+            border-top: 4px solid transparent;
+        }
+        .card:not(.challenge-card):hover { /* Apply hover only to content cards */
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px var(--shadow-color), 0 4px 6px -2px rgba(0,0,0,0.05);
+            border-top-color: var(--accent-color);
+            cursor: pointer;
+        }
+        .card.challenge-card .card-action button:hover {
+             color: var(--heading-color);
+        }
+        .card-content { padding: 30px; flex-grow: 1; }
+        .card-icon { font-size: 1.5rem; color: var(--accent-color); margin-bottom: 15px; }
+        .card-summary h2 { color: var(--heading-color); margin-bottom: 10px; font-size: 1.4rem; font-weight: 600; }
+        .card-summary p { font-size: 0.95rem; line-height: 1.6; }
+        .card-detail { display: none; }
+
+        .card-action {
+            padding: 20px 30px;
+            background-color: var(--bg-color);
+            border-top: 1px solid var(--border-color);
+            border-radius: 0 0 12px 12px;
+            text-align: center;
+        }
+        .launch-btn {
+            background: none; border: none; color: var(--accent-color);
+            font-weight: 600; font-size: 0.9rem; cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        /* --- MODAL STYLES --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(8px);
+            z-index: 1000; display: flex; justify-content: center; align-items: center;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
+        }
+        .modal.is-visible { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: var(--card-bg); width: 90%; max-width: 850px; max-height: 90vh;
+            border-radius: 12px; overflow-y: auto;
+            transform: scale(0.95) translateY(10px); transition: transform 0.3s ease;
+        }
+        .modal.is-visible .modal-content { transform: scale(1) translateY(0); }
+        .modal-header { padding: 25px 40px; border-bottom: 1px solid var(--border-color); }
+        .modal-header h2 { color: var(--heading-color); font-size: 1.5rem; }
+        .modal-header p { font-size: 1rem; color: var(--text-color); margin-top: 5px; }
+        .modal-body { padding: 30px 40px; }
+        .modal-body h3 { color: var(--heading-color); font-size: 1.3rem; margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+        .modal-body p, .modal-body ul { line-height: 1.8; margin-bottom: 20px; }
+        .modal-body ul { padding-left: 20px; }
+        .modal-body code { background-color: var(--accent-color-light); color: var(--accent-color); padding: 3px 6px; border-radius: 4px; font-family: monospace; font-weight: 600; }
+        
+        .close-modal {
+            position: absolute; top: 15px; right: 20px; font-size: 1.5rem;
+            color: var(--text-color); cursor: pointer; background: none; border: none;
+        }
+        
+        /* --- CHALLENGE STYLES --- */
+        .feedback-message { min-height: 40px; margin-top: 20px; font-weight: 600; text-align: center; }
+        .feedback-message.success { color: var(--success-color); }
+        .feedback-message.error { color: var(--danger-color); }
+        .challenge-controls { text-align: center; margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .btn {
+            background-color: var(--accent-color); color: white; border: none;
+            padding: 10px 20px; border-radius: 8px; cursor: pointer; margin: 0 5px;
+            font-weight: 500; transition: background-color 0.2s;
+        }
+        .btn:hover { background-color: var(--heading-color); }
+        .btn.btn-secondary { background-color: var(--text-color); }
+        
+        /* Drag & Drop Challenge */
+        .practice-challenge { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .draggable-items, .drop-zones { background: var(--bg-color); padding: 15px; border-radius: 8px; min-height: 350px; }
+        .draggable-item { background: var(--card-bg); padding: 12px; margin-bottom: 10px; border-radius: 6px; cursor: grab; user-select: none; box-shadow: 0 2px 4px var(--shadow-color); }
+        .draggable-item.dragging { opacity: 0.5; }
+        .drop-zone { border: 2px dashed var(--border-color); border-radius: 6px; height: 65px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
+        .drop-zone.over { background-color: var(--accent-color-light); border-color: var(--accent-color); }
+        
+        /* Scenario Challenge */
+        .question-text { background: var(--bg-color); padding: 20px; border-radius: 8px; margin-bottom: 20px; font-size: 1.1rem; text-align: center; border-left: 4px solid var(--accent-color); }
+        .options-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .option-button {
+            background: var(--card-bg); border: 1px solid var(--border-color); padding: 15px;
+            border-radius: 8px; cursor: pointer; transition: all 0.2s; text-align: left;
+            position: relative; padding-right: 40px;
+        }
+        .option-button:hover { border-color: var(--accent-color); background: var(--accent-color-light); }
+        .option-button:disabled { cursor: not-allowed; opacity: 0.8; }
+        .option-button.correct { border-color: var(--success-color); background: var(--accent-color-light); }
+        .option-button.incorrect { border-color: var(--danger-color); }
+        .option-button::after {
+            font-family: "Font Awesome 6 Free"; font-weight: 900;
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+        }
+        .option-button.correct::after { content: "\f00c"; color: var(--success-color); }
+        .option-button.incorrect::after { content: "\f00d"; color: var(--danger-color); }
+        
+        .theme-toggle { position: fixed; top: 20px; right: 20px; cursor: pointer; color: var(--heading-color); z-index: 1002; background: var(--card-bg); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px var(--shadow-color); }
+    </style>
+</head>
+<body>
+    <div class="theme-toggle"><i class="fa-solid fa-moon"></i></div>
+    
+    <div class="header">
+        <h1>Solid Phase Extraction</h1>
+        <p>An Interactive Guide for Students</p>
+    </div>
+
+    <div class="card-container">
+        <!-- Content Cards -->
+        <div class="card" data-topic="intro">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-flask-vial"></i></div>
+                <div class="card-summary"><h2>Introduction to SPE</h2><p>What is SPE and why is it essential for modern analytical chemistry?</p></div>
+            </div>
+            <div class="card-detail"></div>
+        </div>
+        <div class="card" data-topic="principles">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-magnet"></i></div>
+                <div class="card-summary"><h2>Core Principles</h2><p>Understand the two main strategies: "Catch and Release" vs. the "Pass-Through" method.</p></div>
+            </div>
+            <div class="card-detail"></div>
+        </div>
+        <div class="card" data-topic="spe-vs-hplc">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-code-compare"></i></div>
+                <div class="card-summary"><h2>SPE vs. Chromatography</h2><p>They seem similar, but their goals are fundamentally different. Learn the key distinction.</p></div>
+            </div>
+            <div class="card-detail"></div>
+        </div>
+        <div class="card" data-topic="workflow">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-list-ol"></i></div>
+                <div class="card-summary"><h2>The SPE Workflow</h2><p>A deep dive into the five critical phases of a successful extraction method.</p></div>
+            </div>
+            <div class="card-detail"></div>
+        </div>
+        <div class="card" data-topic="sorbents">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
+                <div class="card-summary"><h2>Sorbent Chemistries</h2><p>Explore the different "flavors" of sorbents that provide the power of selectivity.</p></div>
+            </div>
+            <div class="card-detail"></div>
+        </div>
+        
+        <!-- Challenge Cards -->
+        <div class="card challenge-card" data-topic="practice">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-shuffle"></i></div>
+                <div class="card-summary"><h2>Challenge 1: Workflow</h2><p>Drag and drop the SPE workflow steps into the correct order to test your understanding.</p></div>
+            </div>
+            <div class="card-action"><button class="launch-btn">Launch Challenge &rarr;</button></div>
+        </div>
+        <div class="card challenge-card" data-topic="scenario">
+            <div class="card-content">
+                <div class="card-icon"><i class="fa-solid fa-vial-circle-check"></i></div>
+                <div class="card-summary"><h2>Challenge 2: Scenario Solver</h2><p>You are the chemist! Choose the best SPE mechanism for each real-world scenario.</p></div>
+            </div>
+            <div class="card-action"><button class="launch-btn">Launch Challenge &rarr;</button></div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    <div class="modal" id="content-modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <div class="modal-header"><h2></h2></div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="practice-modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <div class="modal-header">
+                <h2>Challenge 1: The SPE Workflow</h2>
+                <p>Drag the steps from the left and drop them into the correct order on the right.</p>
+            </div>
+            <div class="modal-body">
+                <div class="practice-challenge">
+                    <div class="draggable-items"></div>
+                    <div class="drop-zones">
+                        <div class="drop-zone" data-order="1"></div><div class="drop-zone" data-order="2"></div>
+                        <div class="drop-zone" data-order="3"></div><div class="drop-zone" data-order="4"></div>
+                        <div class="drop-zone" data-order="5"></div>
+                    </div>
+                </div>
+                <div class="feedback-message" id="feedback-message"></div>
+                <div class="challenge-controls"><button class="btn" id="check-answer">Check Answer</button><button class="btn btn-secondary" id="reset-practice">Reset</button></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="scenario-modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <div class="modal-header">
+                <h2>Challenge 2: Scenario Solver</h2>
+                <p>Choose the best sorbent mechanism for the given situation.</p>
+            </div>
+            <div class="modal-body">
+                <div id="scenario-text" class="question-text"></div>
+                <div id="scenario-options" class="options-container"></div>
+                <div class="feedback-message" id="scenario-feedback"></div>
+                <div class="challenge-controls"><button class="btn" id="next-scenario">Next Scenario</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Content Population ---
+            const cardDetails = {
+                intro: `<h3>What is SPE?</h3><p>In analytical chemistry, samples are rarely pure. They are complex mixtures containing our <strong>analyte</strong> and a <strong>sample matrix</strong>. Solid Phase Extraction (SPE) is a powerful technique used to isolate, purify, and concentrate analytes from a liquid sample before analysis.</p><h3>Primary Goals:</h3><ul><li><strong>Concentration:</strong> Increasing the concentration of trace-level analytes.</li><li><strong>Purification:</strong> Removing interfering matrix components.</li><li><strong>Solvent Exchange:</strong> Transferring the analyte into a more suitable solvent.</li></ul>`,
+                principles: `<h3>Strategy 1: "Catch and Release"</h3><p>The most common approach. The sorbent is chosen to have a very strong affinity for the analyte, which is later released with a strong solvent.</p><h3>Strategy 2: "Pass-Through"</h3><p>This strategy retains the matrix components, while the analyte passes straight through the cartridge. It purifies but does not concentrate.</p>`,
+                'spe-vs-hplc': `<h3>Different Goals</h3><p>While both SPE and HPLC use a stationary and mobile phase, their objectives are opposite:</p><ul><li><strong>HPLC (Dynamic Separation):</strong> The goal is for all compounds to move through the column at different speeds for separation over time. The ideal retention factor (<code>k'</code>) is between 2 and 10.</li><li><strong>SPE (Binary Separation):</strong> The goal is an "on/off" mechanism. During loading, we want complete retention (<code>k' > 1000</code>). During elution, we want immediate release (<code>k' ≈ 0</code>).</li></ul>`,
+                workflow: `<h3>Step 1: Conditioning</h3><p>The cartridge is flushed with an organic solvent to activate the sorbent.</p><h3>Step 2: Equilibration</h3><p>Rinsing with the sample's solvent to create a compatible environment.</p><h3>Step 3: Sample Loading</h3><p>Passing the sample slowly through the cartridge to bind analytes.</p><h3>Step 4: Washing</h3><p>Rinsing away weakly-bound interferences.</p><h3>Step 5: Elution</h3><p>Using a strong solvent to collect the purified analytes.</p>`,
+                sorbents: `<h3>Reversed-Phase (RP)</h3><p>Uses hydrophobic interactions. Most common mode (e.g., C18).</p><h3>Normal Phase (NP)</h3><p>Uses polar interactions (e.g., silica).</p><h3>Ion Exchange (IEX)</h3><p>Uses electrostatic attraction for charged analytes.</p><h3>Mixed-Mode</h3><p>Combines multiple mechanisms for high selectivity.</p>`,
+            };
+            document.querySelectorAll('.card[data-topic]').forEach(card => {
+                const topic = card.dataset.topic;
+                if (cardDetails[topic]) {
+                    const detailDiv = card.querySelector('.card-detail');
+                    if (detailDiv) detailDiv.innerHTML = cardDetails[topic];
+                }
+            });
+
+            // --- THEME TOGGLE ---
+            const themeToggle = document.querySelector('.theme-toggle');
+            themeToggle.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                const icon = themeToggle.querySelector('i');
+                icon.classList.toggle('fa-moon');
+                icon.classList.toggle('fa-sun');
+            });
+
+            // --- MODAL HANDLING (CORRECTED LOGIC) ---
+            const modals = {
+                content: document.getElementById('content-modal'),
+                practice: document.getElementById('practice-modal'),
+                scenario: document.getElementById('scenario-modal'),
+            };
+
+            // Listener for CONTENT cards
+            document.querySelectorAll('.card:not(.challenge-card)').forEach(card => {
+                card.addEventListener('click', () => {
+                    const topic = card.dataset.topic;
+                    if (cardDetails[topic]) {
+                        modals.content.querySelector('.modal-header h2').textContent = card.querySelector('h2').textContent;
+                        modals.content.querySelector('.modal-body').innerHTML = cardDetails[topic];
+                        modals.content.classList.add('is-visible');
+                    }
+                });
+            });
+
+            // Listener for CHALLENGE cards (targeting the button)
+            document.querySelectorAll('.challenge-card .launch-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    event.stopPropagation(); // Prevent the card's click listener from firing
+                    const card = button.closest('.challenge-card');
+                    const topic = card.dataset.topic;
+                    switch(topic) {
+                        case 'practice': 
+                            initPracticeChallenge(); 
+                            modals.practice.classList.add('is-visible'); 
+                            break;
+                        case 'scenario': 
+                            initScenarioChallenge(); 
+                            modals.scenario.classList.add('is-visible'); 
+                            break;
+                    }
+                });
+            });
+            
+            // Listeners for closing modals
+            document.querySelectorAll('.modal').forEach(modal => {
+                const closeModal = () => modal.classList.remove('is-visible');
+                modal.querySelector('.close-modal').addEventListener('click', closeModal);
+                modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+            });
+            document.addEventListener('keydown', e => {
+                if (e.key === "Escape") document.querySelectorAll('.modal.is-visible').forEach(m => m.classList.remove('is-visible'));
+            });
+
+            // --- CHALLENGE 1: DRAG & DROP ---
+            const draggableItemsContainer = document.querySelector('.draggable-items');
+            const dropZones = document.querySelectorAll('.drop-zone');
+            const feedbackMessage = document.getElementById('feedback-message');
+            const correctOrder = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5'];
+            const workflowSteps = [
+                { id: 'step-4', text: 'Washing' }, { id: 'step-1', text: 'Conditioning' },
+                { id: 'step-5', text: 'Elution' }, { id: 'step-3', text: 'Sample Loading' },
+                { id: 'step-2', text: 'Equilibration' }
+            ];
+
+            function initPracticeChallenge() {
+                feedbackMessage.textContent = '';
+                feedbackMessage.className = 'feedback-message';
+                draggableItemsContainer.innerHTML = '';
+                dropZones.forEach(zone => zone.innerHTML = '');
+                const shuffledSteps = [...workflowSteps].sort(() => Math.random() - 0.5);
+                shuffledSteps.forEach(step => {
+                    const item = document.createElement('div');
+                    item.className = 'draggable-item';
+                    item.id = step.id;
+                    item.textContent = step.text;
+                    item.draggable = true;
+                    draggableItemsContainer.appendChild(item);
+                });
+                document.querySelectorAll('.draggable-item').forEach(draggable => {
+                    draggable.addEventListener('dragstart', () => draggable.classList.add('dragging'));
+                    draggable.addEventListener('dragend', () => draggable.classList.remove('dragging'));
+                });
+            }
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('over'); });
+                zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+                zone.addEventListener('drop', e => {
+                    e.preventDefault(); zone.classList.remove('over');
+                    const draggingItem = document.querySelector('.dragging');
+                    if (zone.children.length === 0 && draggingItem) zone.appendChild(draggingItem);
+                });
+            });
+            draggableItemsContainer.addEventListener('dragover', e => e.preventDefault());
+            draggableItemsContainer.addEventListener('drop', e => {
+                e.preventDefault();
+                const draggingItem = document.querySelector('.dragging');
+                if (draggingItem) draggableItemsContainer.appendChild(draggingItem);
+            });
+            document.getElementById('check-answer').addEventListener('click', () => {
+                const isCorrect = Array.from(dropZones).every((zone, index) => {
+                    const item = zone.querySelector('.draggable-item');
+                    return item && item.id === correctOrder[index];
+                });
+                feedbackMessage.textContent = isCorrect ? 'Correct! Excellent work.' : 'Not quite right. Try again!';
+                feedbackMessage.className = isCorrect ? 'feedback-message success' : 'feedback-message error';
+            });
+            document.getElementById('reset-practice').addEventListener('click', initPracticeChallenge);
+
+            // --- CHALLENGE 2: SCENARIO SOLVER ---
+            const scenarioData = [
+                { scenario: "Extract a non-polar pesticide from river water.", options: ["Reversed-Phase", "Normal Phase", "Anion Exchange", "Cation Exchange"], correct: "Reversed-Phase", explanation: "Reversed-phase uses a non-polar sorbent, perfect for retaining non-polar analytes from a polar matrix like water." },
+                { scenario: "Isolate a positively charged drug (a base) from blood plasma.", options: ["Reversed-Phase", "Anion Exchange", "Cation Exchange", "Normal Phase"], correct: "Cation Exchange", explanation: "Cation exchange uses a negatively charged sorbent to retain positively charged analytes (cations)." },
+                { scenario: "Purify a polar sugar compound dissolved in hexane (a non-polar solvent).", options: ["Reversed-Phase", "Normal Phase", "Mixed-Mode", "Cation Exchange"], correct: "Normal Phase", explanation: "Normal phase uses a polar sorbent (like silica) to retain polar analytes from a non-polar solvent." }
+            ];
+            let currentScenarioIndex = 0;
+            
+            function displayScenario(index) {
+                const data = scenarioData[index];
+                document.getElementById('scenario-text').textContent = data.scenario;
+                const optionsContainer = document.getElementById('scenario-options');
+                optionsContainer.innerHTML = '';
+                data.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-button';
+                    btn.textContent = opt;
+                    btn.onclick = () => checkScenarioAnswer(opt, data.correct, data.explanation);
+                    optionsContainer.appendChild(btn);
+                });
+                document.getElementById('scenario-feedback').textContent = '';
+            }
+            function checkScenarioAnswer(selected, correct, explanation) {
+                document.querySelectorAll('#scenario-options .option-button').forEach(btn => {
+                    btn.disabled = true;
+                    if (btn.textContent === correct) btn.classList.add('correct');
+                    else if (btn.textContent === selected) btn.classList.add('incorrect');
+                });
+                const feedbackEl = document.getElementById('scenario-feedback');
+                feedbackEl.textContent = explanation;
+                feedbackEl.className = (selected === correct) ? 'feedback-message success' : 'feedback-message error';
+            }
+
+            function initScenarioChallenge() { currentScenarioIndex = 0; displayScenario(0); }
+            document.getElementById('next-scenario').addEventListener('click', () => {
+                currentScenarioIndex = (currentScenarioIndex + 1) % scenarioData.length;
+                displayScenario(currentScenarioIndex);
+            });
+        });
+    </script>
+</body>
+</html>
